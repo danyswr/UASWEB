@@ -1,22 +1,17 @@
 <?php
 
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\BattleController;
 
-Route::get('/', function () {
-    return Inertia::render('Login');
-})->name('login');
+Route::get('/', [UserController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [UserController::class, 'login']);
+Route::post('/logout', [UserController::class, 'logout'])->name('logout');
+Route::get('/register', [UserController::class, 'showRegisterForm'])->name('register');
+Route::post('/register', [UserController::class, 'register']);
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->name('dashboard')->middleware(['auth']);
-
-// Battle routes
 Route::middleware(['auth'])->group(function () {
-    Route::get('/battle/start/{monsterId}', [BattleController::class, 'startBattle']);
-    Route::post('/battle/attack/{battleId}', [BattleController::class, 'attack']);
-    Route::post('/battle/defend/{battleId}', [BattleController::class, 'defend']);
-    Route::get('/battle/end/{battleId}', [BattleController::class, 'endBattle']);
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
 });
-
