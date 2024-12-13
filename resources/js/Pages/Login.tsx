@@ -156,8 +156,8 @@ function LoginForm({ data, setData, errors, processing, showPassword, setShowPas
           </div>
           <div className="text-center text-sm text-gray-600">
             New to RPG Gym Quest?{" "}
-            <a href="/register" className="text-black font-semibold hover:underline">
-              Create your character
+            <a href={route('register')} className="text-black font-semibold hover:underline">
+                        Create your character
             </a>
           </div>
         </CardContent>
