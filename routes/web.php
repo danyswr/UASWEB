@@ -73,14 +73,13 @@ Route::middleware('guest')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Role Management Routes
+| Role Management Routes (API)
 |--------------------------------------------------------------------------
 */
-// ------------------------- Role Management -------------------------
-Route::middleware(['auth'])->group(function () {
-    // CRUD for Roles (Admin-level or role management)
-    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-    Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
-    Route::put('/roles/{id}', [RoleController::class, 'update'])->name('roles.update');
-    Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+// ------------------------- Role Management API -------------------------
+Route::prefix('api')->group(function () {
+    Route::get('/roles', [RoleController::class, 'index'])->name('api.roles.index');
+    Route::post('/roles', [RoleController::class, 'store'])->name('api.roles.store');
+    Route::put('/roles/{id}', [RoleController::class, 'update'])->name('api.roles.update');
+    Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('api.roles.destroy');
 });
