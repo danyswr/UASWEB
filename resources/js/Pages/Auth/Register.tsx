@@ -1,23 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from '@inertiajs/react'
 import { router } from '@inertiajs/react'
-import { Eye, EyeOff, Dumbbell, Swords, Shield, Flame, Trophy, User } from 'lucide-react'
+import { Eye, EyeOff, Dumbbell, Swords, Shield, Flame, Trophy, User, Sword, BoxIcon, Brain, Ruler, Weight, Calendar, ArrowLeft, ArrowRight } from 'lucide-react'
 import { Button } from "@/Components/ui/button"
 import { Input } from "@/Components/ui/input"
 import { Label } from "@/Components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card"
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sword, BoxIcon as Bow, Ruler, Weight, Calendar, Brain } from 'lucide-react'
 import { Slider } from "@/Components/ui/slider"
 import { Progress } from "@/Components/ui/progress"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/Components/ui/tooltip"
+import axios from 'axios'
 
 interface FormData {
   name: string
   email: string
   password: string
   password_confirmation: string
+  tanggal_lahir: string
+  gender: string
+  role: Role | null
+  berat_badan: number
+  tinggi_badan: number
+  age: number
 }
 
 interface CharacterData {
@@ -30,9 +37,15 @@ interface CharacterData {
   intelligence: number
 }
 
+interface Role {
+  id: number;
+  name: string;
+  description: string;
+}
+
 const classes = [
   { name: 'Warrior', icon: Sword, strength: 8, agility: 5, intelligence: 3 },
-  { name: 'Archer', icon: Bow, strength: 5, agility: 8, intelligence: 5 },
+  { name: 'Archer', icon: BoxIcon, strength: 5, agility: 8, intelligence: 5 },
   { name: 'Mage', icon: Brain, strength: 3, agility: 5, intelligence: 8 },
 ]
 
@@ -40,6 +53,18 @@ export default function RegisterAndCreateCharacter() {
   const [step, setStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+    tanggal_lahir: '',
+    gender: '',
+    role: null,
+    berat_badan: 70,
+    tinggi_badan: 170,
+    age: 25,
+  })
   const [characterData, setCharacterData] = useState<CharacterData>({
     class: '',
     height: 170,
@@ -49,27 +74,54 @@ export default function RegisterAndCreateCharacter() {
     agility: 0,
     intelligence: 0,
   })
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [errors, setErrors] = useState({});
 
-  const { data, setData, post, processing, errors } = useForm<FormData>({
+  useEffect(() => {
+    fetch('/api/roles')
+      .then(response => response.json())
+      .then(data => setRoles(data))
+      .catch(error => console.error('Error fetching roles:', error));
+  }, []);
+
+  const { data: formdata, setData, post, processing, errors: formErrors } = useForm<FormData>({
     name: '',
     email: '',
     password: '',
-    password_confirmation: ''
+    password_confirmation: '',
+    tanggal_lahir: '',
+    gender: '',
+    role: null,
+    berat_badan: 70,
+    tinggi_badan: 170,
+    age: 25,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    post('/register', {
-      preserveState: true,
-      preserveScroll: true,
-      onSuccess: () => {
-        console.log('Registration successful, proceeding to character creation')
-        setStep(2)
-      },
-      onError: (errors) => {
-        console.error('Registration failed:', errors)
-      },
-    })
+    if (validateForm()) {
+      if (step < 3) {
+        setStep(step + 1)
+      } else {
+        try {
+          // Use Inertia's router instead of fetch
+          router.post('/register', {
+            ...formData,
+            role: formData.role?.name,
+            ...characterData
+          }, {
+            onSuccess: () => {
+              router.visit('/dashboard')
+            },
+            onError: (errors) => {
+              setErrors(errors)
+            }
+          })
+        } catch (error) {
+          console.error('Error registering and creating character:', error)
+        }
+      }
+    }
   }
 
   const handleClassSelect = (className: string) => {
@@ -107,6 +159,32 @@ export default function RegisterAndCreateCharacter() {
     })
   }
 
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {};
+
+    if (!formData.name) {
+      newErrors.name = "Name is required";
+      isValid = false;
+    }
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    }
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    }
+    if (formData.password !== formData.password_confirmation) {
+      newErrors.password_confirmation = "Passwords do not match";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-white flex flex-col lg:flex-row">
       <HeroSection />
@@ -132,8 +210,8 @@ export default function RegisterAndCreateCharacter() {
                   }}
                 >
                   <RegisterForm
-                    data={data}
-                    setData={setData}
+                    formData={formData}
+                    setFormData={setFormData}
                     errors={errors}
                     processing={processing}
                     showPassword={showPassword}
@@ -161,6 +239,9 @@ export default function RegisterAndCreateCharacter() {
                     setCharacterData={setCharacterData}
                     handleClassSelect={handleClassSelect}
                     handleCharacterSubmit={handleCharacterSubmit}
+                    roles={roles}
+                    formData={formData}
+                    setFormData={setFormData}
                   />
                 </motion.div>
               )}
@@ -197,8 +278,8 @@ function HeroSection() {
 }
 
 interface RegisterFormProps {
-  data: FormData
-  setData: (key: keyof FormData, value: string) => void
+  formData: FormData
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>
   errors: Record<string, string>
   processing: boolean
   showPassword: boolean
@@ -208,16 +289,16 @@ interface RegisterFormProps {
   handleSubmit: (e: React.FormEvent) => void
 }
 
-function RegisterForm({ 
-  data, 
-  setData, 
-  errors, 
-  processing, 
-  showPassword, 
+function RegisterForm({
+  formData,
+  setFormData,
+  errors,
+  processing,
+  showPassword,
   setShowPassword,
   showConfirmPassword,
   setShowConfirmPassword,
-  handleSubmit 
+  handleSubmit
 }: RegisterFormProps) {
   return (
     <form onSubmit={handleSubmit}>
@@ -225,11 +306,11 @@ function RegisterForm({
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium text-gray-700">Character Name</Label>
           <div className="relative">
-            <Input 
+            <Input
               id="name"
               type="text"
-              value={data.name}
-              onChange={(e) => setData('name', e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter your character name"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -240,11 +321,11 @@ function RegisterForm({
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
           <div className="relative">
-            <Input 
+            <Input
               id="email"
               type="email"
-              value={data.email}
-              onChange={(e) => setData('email', e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="Enter your email"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -258,8 +339,8 @@ function RegisterForm({
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              value={data.password}
-              onChange={(e) => setData('password', e.target.value)}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               placeholder="Enter your password"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -282,8 +363,8 @@ function RegisterForm({
             <Input
               id="password_confirmation"
               type={showConfirmPassword ? "text" : "password"}
-              value={data.password_confirmation}
-              onChange={(e) => setData('password_confirmation', e.target.value)}
+              value={formData.password_confirmation}
+              onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
               placeholder="Confirm your password"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -335,37 +416,43 @@ interface CharacterCreationFormProps {
   setCharacterData: React.Dispatch<React.SetStateAction<CharacterData>>
   handleClassSelect: (className: string) => void
   handleCharacterSubmit: () => void
+  roles: Role[]
+  formData: FormData
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>
 }
 
 function CharacterCreationForm({
   characterData,
   setCharacterData,
   handleClassSelect,
-  handleCharacterSubmit
+  handleCharacterSubmit,
+  roles,
+  formData,
+  setFormData
 }: CharacterCreationFormProps) {
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Choose Your Class</h3>
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {classes.map((classOption) => (
+          {roles.map((role) => (
             <Button
-              key={classOption.name}
-              variant={characterData.class === classOption.name ? 'default' : 'outline'}
+              key={role.id}
+              variant={formData.role?.id === role.id ? 'default' : 'outline'}
               className={`h-24 flex flex-col items-center justify-center gap-2 ${
-                characterData.class === classOption.name 
-                  ? 'bg-black text-white hover:bg-black/90' 
+                formData.role?.id === role.id
+                  ? 'bg-black text-white hover:bg-black/90'
                   : 'hover:bg-gray-50'
               }`}
-              onClick={() => handleClassSelect(classOption.name)}
+              onClick={() => setFormData({ ...formData, role: role })}
             >
-              <classOption.icon className="w-8 h-8" />
-              <span>{classOption.name}</span>
+              <span>{role.name}</span>
+              <span className="text-xs text-center">{role.description}</span>
             </Button>
           ))}
         </div>
       </div>
-      {characterData.class && (
+      {formData.role && (
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -374,14 +461,14 @@ function CharacterCreationForm({
             </Label>
             <div className="flex items-center gap-4">
               <Slider
-                value={[characterData.height]}
-                onValueChange={(value) => setCharacterData({ ...characterData, height: value[0] })}
+                value={[formData.tinggi_badan]}
+                onValueChange={(value) => setFormData({ ...formData, tinggi_badan: value[0] })}
                 max={220}
                 min={140}
                 step={1}
                 className="flex-1"
               />
-              <span className="w-12 text-right">{characterData.height}</span>
+              <span className="w-12 text-right">{formData.tinggi_badan}</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -391,14 +478,14 @@ function CharacterCreationForm({
             </Label>
             <div className="flex items-center gap-4">
               <Slider
-                value={[characterData.weight]}
-                onValueChange={(value) => setCharacterData({ ...characterData, weight: value[0] })}
+                value={[formData.berat_badan]}
+                onValueChange={(value) => setFormData({ ...formData, berat_badan: value[0] })}
                 max={150}
                 min={40}
                 step={1}
                 className="flex-1"
               />
-              <span className="w-12 text-right">{characterData.weight}</span>
+              <span className="w-12 text-right">{formData.berat_badan}</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -408,43 +495,22 @@ function CharacterCreationForm({
             </Label>
             <div className="flex items-center gap-4">
               <Slider
-                value={[characterData.age]}
-                onValueChange={(value) => setCharacterData({ ...characterData, age: value[0] })}
+                value={[formData.age]}
+                onValueChange={(value) => setFormData({ ...formData, age: value[0] })}
                 max={100}
                 min={16}
                 step={1}
                 className="flex-1"
               />
-              <span className="w-12 text-right">{characterData.age}</span>
+              <span className="w-12 text-right">{formData.age}</span>
             </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Strength</span>
-              <span>{characterData.strength}</span>
-            </div>
-            <Progress value={characterData.strength * 10} className="h-2" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Agility</span>
-              <span>{characterData.agility}</span>
-            </div>
-            <Progress value={characterData.agility * 10} className="h-2" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Intelligence</span>
-              <span>{characterData.intelligence}</span>
-            </div>
-            <Progress value={characterData.intelligence * 10} className="h-2" />
           </div>
         </div>
       )}
-      <Button 
-        onClick={handleCharacterSubmit} 
+      <Button
+        onClick={handleCharacterSubmit}
         className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-3 rounded-lg transition duration-200 text-lg mt-4"
-        disabled={!characterData.class}
+        disabled={!formData.role}
       >
         Create Your Hero
       </Button>

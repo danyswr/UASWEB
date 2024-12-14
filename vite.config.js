@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
+import process from 'process';  // Tambahkan ini untuk polyfill process
 
 export default defineConfig({
     plugins: [
@@ -13,7 +14,10 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': '/resources/js',
+            process: 'process/browser',  // Alias untuk polyfill process
         },
     },
+    define: {
+        'process.env': process.env,  // Polyfill untuk process.env
+    },
 });
-

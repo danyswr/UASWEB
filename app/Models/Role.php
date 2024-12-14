@@ -19,6 +19,7 @@ class Role extends Model
         return $this->hasMany(User::class);
     }
 
+    
     public function skills()
     {
         return $this->hasMany(Skill::class);

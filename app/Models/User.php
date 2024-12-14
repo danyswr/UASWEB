@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-class User extends Model
+class User extends Authenticatable
 {
-    use HasFactory;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
         'email',
-        'email_verified_at',
         'password',
         'tanggal_lahir',
         'gender',
@@ -26,18 +28,11 @@ class User extends Model
         'remember_token',
     ];
 
-    public function role()
-    {
-        return $this->belongsTo(Role::class, 'role', 'name');
-    }
-
-    public function items()
-    {
-        return $this->hasMany(UserItem::class);
-    }
-
-    public function battles()
-    {
-        return $this->hasMany(Battle::class);
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'tanggal_lahir' => 'date',
+        'berat_badan' => 'float',
+        'tinggi_badan' => 'float',
+    ];
 }
+
