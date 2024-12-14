@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from '@inertiajs/react'
 import { router } from '@inertiajs/react'
-import { Eye, EyeOff, Dumbbell, Swords, Shield, Flame, Trophy, User, Sword, BoxIcon, Brain, Ruler, Weight, Calendar, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Dumbbell, Swords, Shield, Flame, Trophy, User, Sword, BoxIcon, Brain, Ruler, Weight, Calendar, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from "@/Components/ui/button"
 import { Input } from "@/Components/ui/input"
 import { Label } from "@/Components/ui/label"
@@ -76,6 +76,7 @@ export default function RegisterAndCreateCharacter() {
   })
   const [roles, setRoles] = useState<Role[]>([]);
   const [errors, setErrors] = useState({});
+  const [direction, setDirection] = useState('next');
 
   useEffect(() => {
     fetch('/api/roles')
@@ -430,90 +431,195 @@ function CharacterCreationForm({
   formData,
   setFormData
 }: CharacterCreationFormProps) {
+  const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
+  const [direction, setDirection] = useState('next');
+  const [hasSelectedClass, setHasSelectedClass] = useState(false);
+
+  const nextRole = () => {
+    setDirection('next');
+    setCurrentRoleIndex((prevIndex) => (prevIndex + 1) % roles.length);
+  };
+
+  const prevRole = () => {
+    setDirection('prev');
+    setCurrentRoleIndex((prevIndex) => (prevIndex - 1 + roles.length) % roles.length);
+  };
+
+  const handleRoleSelect = () => {
+    setFormData({ ...formData, role: roles[currentRoleIndex] });
+    setHasSelectedClass(true);
+  };
+
+  const handleBackToClassSelection = () => {
+    setHasSelectedClass(false);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Choose Your Class</h3>
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {roles.map((role) => (
-            <Button
-              key={role.id}
-              variant={formData.role?.id === role.id ? 'default' : 'outline'}
-              className={`h-24 flex flex-col items-center justify-center gap-2 ${
-                formData.role?.id === role.id
-                  ? 'bg-black text-white hover:bg-black/90'
-                  : 'hover:bg-gray-50'
-              }`}
-              onClick={() => setFormData({ ...formData, role: role })}
-            >
-              <span>{role.name}</span>
-              <span className="text-xs text-center">{role.description}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
-      {formData.role && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Ruler className="w-4 h-4" />
-              Height (cm)
-            </Label>
-            <div className="flex items-center gap-4">
-              <Slider
-                value={[formData.tinggi_badan]}
-                onValueChange={(value) => setFormData({ ...formData, tinggi_badan: value[0] })}
-                max={220}
-                min={140}
-                step={1}
-                className="flex-1"
-              />
-              <span className="w-12 text-right">{formData.tinggi_badan}</span>
+      <AnimatePresence mode="wait">
+        {!hasSelectedClass ? (
+          <motion.div
+            key="class-selection"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h3 className="text-2xl font-semibold mb-4 text-center">Choose Your Class</h3>
+            <div className="relative min-h-[400px]">
+              <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-6">
+                <span className="text-2xl font-bold">{roles[currentRoleIndex].name}</span>
+                <div className="w-32 h-32 relative overflow-hidden">
+                  <AnimatePresence initial={false} custom={direction}>
+                    <motion.img
+                      key={currentRoleIndex}
+                      src={`/roles/${roles[currentRoleIndex].name.toLowerCase()}.png`}
+                      alt={`${roles[currentRoleIndex].name} class`}
+                      className="w-full h-full object-contain absolute inset-0"
+                      custom={direction}
+                      initial={(custom) => ({ x: custom === 'next' ? 100 : -100, opacity: 0 })}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={(custom) => ({ x: custom === 'next' ? -100 : 100, opacity: 0 })}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                        mass: 0.5
+                      }}
+                    />
+                  </AnimatePresence>
+                </div>
+                <p className="text-center text-gray-600">{roles[currentRoleIndex].description}</p>
+                <Button
+                  className="w-full max-w-[200px]"
+                  variant={formData.role?.id === roles[currentRoleIndex].id ? 'default' : 'outline'}
+                  onClick={handleRoleSelect}
+                >
+                  {formData.role?.id === roles[currentRoleIndex].id ? 'Selected' : 'Choose This Class'}
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10"
+                onClick={prevRole}
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10"
+                onClick={nextRole}
+              >
+                <ChevronRight className="h-8 w-8" />
+              </Button>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Weight className="w-4 h-4" />
-              Weight (kg)
-            </Label>
-            <div className="flex items-center gap-4">
-              <Slider
-                value={[formData.berat_badan]}
-                onValueChange={(value) => setFormData({ ...formData, berat_badan: value[0] })}
-                max={150}
-                min={40}
-                step={1}
-                className="flex-1"
-              />
-              <span className="w-12 text-right">{formData.berat_badan}</span>
+
+            <div className="flex justify-center mt-4">
+              {roles.map((_, index) => (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full mx-1 ${
+                    index === currentRoleIndex ? 'bg-black' : 'bg-gray-300'
+                  }`}
+                />
+              ))}
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Age (years)
-            </Label>
-            <div className="flex items-center gap-4">
-              <Slider
-                value={[formData.age]}
-                onValueChange={(value) => setFormData({ ...formData, age: value[0] })}
-                max={100}
-                min={16}
-                step={1}
-                className="flex-1"
+          </motion.div>
+        ) : (
+          <motion.div
+            key="hero-customization"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4 mt-8"
+          >
+            <h4 className="text-xl font-semibold mb-4 text-center">Customize Your Hero</h4>
+            <div className="flex items-center justify-center mb-6">
+              <img
+                src={`/roles/${formData.role?.name.toLowerCase()}.png`}
+                alt={`${formData.role?.name} class`}
+                className="w-24 h-24 object-contain"
               />
-              <span className="w-12 text-right">{formData.age}</span>
+              <div className="ml-4">
+                <h5 className="text-lg font-semibold">{formData.role?.name}</h5>
+                <p className="text-sm text-gray-600">{formData.role?.description}</p>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-      <Button
-        onClick={handleCharacterSubmit}
-        className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-3 rounded-lg transition duration-200 text-lg mt-4"
-        disabled={!formData.role}
-      >
-        Create Your Hero
-      </Button>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Ruler className="w-4 h-4" />
+                  Height (cm)
+                </Label>
+                <div className="flex items-center gap-4">
+                  <Slider
+                    value={[formData.tinggi_badan]}
+                    onValueChange={(value) => setFormData({ ...formData, tinggi_badan: value[0] })}
+                    max={220}
+                    min={140}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="w-12 text-right">{formData.tinggi_badan}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Weight className="w-4 h-4" />
+                  Weight (kg)
+                </Label>
+                <div className="flex items-center gap-4">
+                  <Slider
+                    value={[formData.berat_badan]}
+                    onValueChange={(value) => setFormData({ ...formData, berat_badan: value[0] })}
+                    max={150}
+                    min={40}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="w-12 text-right">{formData.berat_badan}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Age (years)
+                </Label>
+                <div className="flex items-center gap-4">
+                  <Slider
+                    value={[formData.age]}
+                    onValueChange={(value) => setFormData({ ...formData, age: value[0] })}
+                    max={100}
+                    min={16}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="w-12 text-right">{formData.age}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between mt-6">
+              <Button
+                onClick={handleBackToClassSelection}
+                variant="outline"
+                className="w-full mr-2"
+              >
+                Back to Class Selection
+              </Button>
+              <Button
+                onClick={handleCharacterSubmit}
+                className="w-full ml-2 bg-black hover:bg-gray-800 text-white"
+              >
+                Create Your Hero
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
