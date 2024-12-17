@@ -23,9 +23,8 @@ Route::post('/login', [UserController::class, 'login']);
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 
 // Registration Routes
-Route::get('/register', [UserController::class, 'showRegisterForm'])->name('register');
-Route::post('/register', [UserController::class, 'register']);
-
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register'); // Form register
+Route::post('/register', [AuthController::class, 'register'])->name('register.post'); // Proses register ke database
 
 /*
 |--------------------------------------------------------------------------
@@ -67,9 +66,8 @@ Route::middleware(['auth'])->group(function () {
 // ------------------------- Auth Routes for Guests -------------------------
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->name('register.post');
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -82,4 +80,7 @@ Route::prefix('api')->group(function () {
     Route::post('/roles', [RoleController::class, 'store'])->name('api.roles.store');
     Route::put('/roles/{id}', [RoleController::class, 'update'])->name('api.roles.update');
     Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('api.roles.destroy');
+
+    // New: API endpoint to fetch specific animations (attack or breath)
+    Route::get('/roles/{id}/animation', [RoleController::class, 'getAnimation'])->name('api.roles.animation');
 });

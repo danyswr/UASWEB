@@ -21,10 +21,9 @@ interface FormData {
   password_confirmation: string
   tanggal_lahir: string
   gender: string
-  role: Role | null
+  role: string
   berat_badan: number
   tinggi_badan: number
-  age: number
 }
 
 interface CharacterData {
@@ -53,18 +52,6 @@ export default function RegisterAndCreateCharacter() {
   const [step, setStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    email: '',
-    password: '',
-    password_confirmation: '',
-    tanggal_lahir: '',
-    gender: '',
-    role: null,
-    berat_badan: 70,
-    tinggi_badan: 170,
-    age: 25,
-  })
   const [characterData, setCharacterData] = useState<CharacterData>({
     class: '',
     height: 170,
@@ -75,8 +62,19 @@ export default function RegisterAndCreateCharacter() {
     intelligence: 0,
   })
   const [roles, setRoles] = useState<Role[]>([]);
-  const [errors, setErrors] = useState({});
   const [direction, setDirection] = useState('next');
+
+  const { data, setData, post, processing, errors } = useForm<FormData>({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+    tanggal_lahir: '',
+    gender: '',
+    role: '',
+    berat_badan: 70,
+    tinggi_badan: 170,
+  })
 
   useEffect(() => {
     fetch('/api/roles')
@@ -85,43 +83,18 @@ export default function RegisterAndCreateCharacter() {
       .catch(error => console.error('Error fetching roles:', error));
   }, []);
 
-  const { data: formdata, setData, post, processing, errors: formErrors } = useForm<FormData>({
-    name: '',
-    email: '',
-    password: '',
-    password_confirmation: '',
-    tanggal_lahir: '',
-    gender: '',
-    role: null,
-    berat_badan: 70,
-    tinggi_badan: 170,
-    age: 25,
-  })
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validateForm()) {
-      if (step < 3) {
-        setStep(step + 1)
-      } else {
-        try {
-          // Use Inertia's router instead of fetch
-          router.post('/register', {
-            ...formData,
-            role: formData.role?.name,
-            ...characterData
-          }, {
-            onSuccess: () => {
-              router.visit('/dashboard')
-            },
-            onError: (errors) => {
-              setErrors(errors)
-            }
-          })
-        } catch (error) {
-          console.error('Error registering and creating character:', error)
-        }
-      }
+    if (step < 2) {
+      setStep(step + 1)
+    } else {
+      post('/register', {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+          router.visit('/dashboard')
+        },
+      })
     }
   }
 
@@ -135,12 +108,8 @@ export default function RegisterAndCreateCharacter() {
         agility: selectedClass.agility,
         intelligence: selectedClass.intelligence,
       })
+      setData('role', className.toLowerCase())
     }
-  }
-
-  const handleCharacterSubmit = () => {
-    console.log('Character created:', characterData)
-    router.visit('/dashboard')
   }
 
   const slideVariants = {
@@ -160,37 +129,11 @@ export default function RegisterAndCreateCharacter() {
     })
   }
 
-  const validateForm = () => {
-    let isValid = true;
-    const newErrors = {};
-
-    if (!formData.name) {
-      newErrors.name = "Name is required";
-      isValid = false;
-    }
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-      isValid = false;
-    }
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-      isValid = false;
-    }
-    if (formData.password !== formData.password_confirmation) {
-      newErrors.password_confirmation = "Passwords do not match";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-white flex flex-col lg:flex-row">
       <HeroSection />
       <div className="lg:w-1/2 bg-white p-8 lg:p-12 flex items-center justify-center">
-        <Card className="w-full max-w-md border-none shadow-2xl bg-white/50 backdrop-blur-sm">
+        <Card className="w-full max-w-2xl border-none shadow-2xl bg-white/50 backdrop-blur-sm">
           <CardHeader className="space-y-1">
             <CardTitle className="text-3xl font-bold text-center">
               {step === 1 ? "Create Your Character" : "Customize Your Hero"}
@@ -211,8 +154,8 @@ export default function RegisterAndCreateCharacter() {
                   }}
                 >
                   <RegisterForm
-                    formData={formData}
-                    setFormData={setFormData}
+                    data={data}
+                    setData={setData}
                     errors={errors}
                     processing={processing}
                     showPassword={showPassword}
@@ -239,10 +182,10 @@ export default function RegisterAndCreateCharacter() {
                     characterData={characterData}
                     setCharacterData={setCharacterData}
                     handleClassSelect={handleClassSelect}
-                    handleCharacterSubmit={handleCharacterSubmit}
+                    handleSubmit={handleSubmit}
                     roles={roles}
-                    formData={formData}
-                    setFormData={setFormData}
+                    data={data}
+                    setData={setData}
                   />
                 </motion.div>
               )}
@@ -279,8 +222,8 @@ function HeroSection() {
 }
 
 interface RegisterFormProps {
-  formData: FormData
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>
+  data: FormData
+  setData: (key: string, value: any) => void
   errors: Record<string, string>
   processing: boolean
   showPassword: boolean
@@ -291,8 +234,8 @@ interface RegisterFormProps {
 }
 
 function RegisterForm({
-  formData,
-  setFormData,
+  data,
+  setData,
   errors,
   processing,
   showPassword,
@@ -310,8 +253,8 @@ function RegisterForm({
             <Input
               id="name"
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={data.name}
+              onChange={(e) => setData('name', e.target.value)}
               placeholder="Enter your character name"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -325,8 +268,8 @@ function RegisterForm({
             <Input
               id="email"
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              value={data.email}
+              onChange={(e) => setData('email', e.target.value)}
               placeholder="Enter your email"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -340,8 +283,8 @@ function RegisterForm({
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              value={data.password}
+              onChange={(e) => setData('password', e.target.value)}
               placeholder="Enter your password"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -364,8 +307,8 @@ function RegisterForm({
             <Input
               id="password_confirmation"
               type={showConfirmPassword ? "text" : "password"}
-              value={formData.password_confirmation}
-              onChange={(e) => setFormData({ ...formData, password_confirmation: e.target.value })}
+              value={data.password_confirmation}
+              onChange={(e) => setData('password_confirmation', e.target.value)}
               placeholder="Confirm your password"
               className="pl-10 bg-white border-gray-300 focus:border-black focus:ring-black rounded-lg"
             />
@@ -416,20 +359,20 @@ interface CharacterCreationFormProps {
   characterData: CharacterData
   setCharacterData: React.Dispatch<React.SetStateAction<CharacterData>>
   handleClassSelect: (className: string) => void
-  handleCharacterSubmit: () => void
+  handleSubmit: (e: React.FormEvent) => void
   roles: Role[]
-  formData: FormData
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>
+  data: FormData
+  setData: (key: string, value: any) => void
 }
 
 function CharacterCreationForm({
   characterData,
   setCharacterData,
   handleClassSelect,
-  handleCharacterSubmit,
+  handleSubmit,
   roles,
-  formData,
-  setFormData
+  data,
+  setData
 }: CharacterCreationFormProps) {
   const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
   const [direction, setDirection] = useState('next');
@@ -446,7 +389,7 @@ function CharacterCreationForm({
   };
 
   const handleRoleSelect = () => {
-    setFormData({ ...formData, role: roles[currentRoleIndex] });
+    setData('role', roles[currentRoleIndex].name.toLowerCase());
     setHasSelectedClass(true);
   };
 
@@ -492,10 +435,10 @@ function CharacterCreationForm({
                 <p className="text-center text-gray-600">{roles[currentRoleIndex].description}</p>
                 <Button
                   className="w-full max-w-[200px]"
-                  variant={formData.role?.id === roles[currentRoleIndex].id ? 'default' : 'outline'}
+                  variant={data.role === roles[currentRoleIndex].name.toLowerCase() ? 'default' : 'outline'}
                   onClick={handleRoleSelect}
                 >
-                  {formData.role?.id === roles[currentRoleIndex].id ? 'Selected' : 'Choose This Class'}
+                  {data.role === roles[currentRoleIndex].name.toLowerCase() ? 'Selected' : 'Choose This Class'}
                 </Button>
               </div>
 
@@ -535,84 +478,106 @@ function CharacterCreationForm({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
-            className="space-y-4 mt-8"
+            className="space-y-6 p-4"
           >
-            <h4 className="text-xl font-semibold mb-4 text-center">Customize Your Hero</h4>
-            <div className="flex items-center justify-center mb-6">
+            <h4 className="text-3xl font-bold text-center mb-8">Customize Your Hero</h4>
+            <div className="flex items-start justify-between mb-10 bg-gray-50 p-6 rounded-lg">
               <img
-                src={`/roles/${formData.role?.name.toLowerCase()}.png`}
-                alt={`${formData.role?.name} class`}
-                className="w-24 h-24 object-contain"
+                src={`/roles/${data.role}.png`}
+                alt={`${data.role} class`}
+                className="w-32 h-32 object-contain"
               />
-              <div className="ml-4">
-                <h5 className="text-lg font-semibold">{formData.role?.name}</h5>
-                <p className="text-sm text-gray-600">{formData.role?.description}</p>
+              <div className="flex-1 ml-6">
+                <h5 className="text-2xl font-semibold capitalize mb-2">{data.role}</h5>
+                <p className="text-gray-600">{roles.find(role => role.name.toLowerCase() === data.role)?.description}</p>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Ruler className="w-4 h-4" />
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2 text-lg">
+                  <Ruler className="w-5 h-5" />
                   Height (cm)
                 </Label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <Slider
-                    value={[formData.tinggi_badan]}
-                    onValueChange={(value) => setFormData({ ...formData, tinggi_badan: value[0] })}
+                    value={[data.tinggi_badan]}
+                    onValueChange={(value) => setData('tinggi_badan', value[0])}
                     max={220}
                     min={140}
                     step={1}
                     className="flex-1"
                   />
-                  <span className="w-12 text-right">{formData.tinggi_badan}</span>
+                  <span className="w-16 text-right text-lg font-medium">{data.tinggi_badan}</span>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Weight className="w-4 h-4" />
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2 text-lg">
+                  <Weight className="w-5 h-5" />
                   Weight (kg)
                 </Label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <Slider
-                    value={[formData.berat_badan]}
-                    onValueChange={(value) => setFormData({ ...formData, berat_badan: value[0] })}
+                    value={[data.berat_badan]}
+                    onValueChange={(value) => setData('berat_badan', value[0])}
                     max={150}
                     min={40}
                     step={1}
                     className="flex-1"
                   />
-                  <span className="w-12 text-right">{formData.berat_badan}</span>
+                  <span className="w-16 text-right text-lg font-medium">{data.berat_badan}</span>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Age (years)
-                </Label>
-                <div className="flex items-center gap-4">
-                  <Slider
-                    value={[formData.age]}
-                    onValueChange={(value) => setFormData({ ...formData, age: value[0] })}
-                    max={100}
-                    min={16}
-                    step={1}
-                    className="flex-1"
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Label htmlFor="tanggal_lahir" className="flex items-center gap-2 text-lg">
+                    <Calendar className="w-5 h-5" />
+                    Date of Birth
+                  </Label>
+                  <Input
+                    id="tanggal_lahir"
+                    type="date"
+                    value={data.tanggal_lahir}
+                    onChange={(e) => setData('tanggal_lahir', e.target.value)}
+                    className="w-full text-lg p-6"
                   />
-                  <span className="w-12 text-right">{formData.age}</span>
+                </div>
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2 text-lg">
+                    <User className="w-5 h-5" />
+                    Gender
+                  </Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      type="button"
+                      variant={data.gender === 'male' ? 'default' : 'outline'}
+                      onClick={() => setData('gender', 'male')}
+                      className="w-full h-[52px] text-lg"
+                    >
+                      Male
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={data.gender === 'female' ? 'default' : 'outline'}
+                      onClick={() => setData('gender', 'female')}
+                      className="w-full h-[52px] text-lg"
+                    >
+                      Female
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-between gap-6 mt-10 pt-6 border-t">
               <Button
                 onClick={handleBackToClassSelection}
                 variant="outline"
-                className="w-full mr-2"
+                className="w-full h-14 text-lg font-medium"
               >
                 Back to Class Selection
               </Button>
               <Button
-                onClick={handleCharacterSubmit}
-                className="w-full ml-2 bg-black hover:bg-gray-800 text-white"
+                onClick={handleSubmit}
+                className="w-full h-14 text-lg font-medium bg-black hover:bg-gray-800 text-white"
               >
                 Create Your Hero
               </Button>
