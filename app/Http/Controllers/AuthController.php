@@ -11,13 +11,20 @@ use Inertia\Inertia;
 
 class AuthController extends Controller
 {
+    /**
+     * Show the registration form
+     */
     public function showRegister()
     {
         return Inertia::render('Auth/Register');
     }
 
+    /**
+     * Handle the user registration
+     */
     public function register(Request $request)
     {
+        // Validate the request data
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -29,10 +36,11 @@ class AuthController extends Controller
             'tinggi_badan' => 'required|numeric|between:100,250',
         ]);
 
+        // Create the user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($request->password), // Hash the password
             'tanggal_lahir' => $request->tanggal_lahir,
             'gender' => $request->gender,
             'role' => $request->role,
@@ -40,8 +48,10 @@ class AuthController extends Controller
             'tinggi_badan' => $request->tinggi_badan,
         ]);
 
+        // Log the user in
         Auth::login($user);
 
-        return redirect()->route('dashboard');
+        // Redirect to the dashboard
+        return redirect()->route('dashboard')->with('success', 'Registration successful!');
     }
 }
