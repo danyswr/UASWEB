@@ -81,6 +81,6 @@ Route::prefix('api')->group(function () {
     Route::put('/roles/{id}', [RoleController::class, 'update'])->name('api.roles.update');
     Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->name('api.roles.destroy');
 
-    // New: API endpoint to fetch specific animations (attack or breath)
+    // New: API endpoint to fetch specific animations (attack or breath)!
     Route::get('/roles/{id}/animation', [RoleController::class, 'getAnimation'])->name('api.roles.animation');
 });
