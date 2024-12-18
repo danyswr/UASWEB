@@ -408,7 +408,7 @@ function CharacterCreationForm({
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <h3 className="text-2xl font-semibold mb-4 text-center">Choose Your Class</h3>
+            <h3 className="text-2xl font-semibold mb-4 text-center">Choose Your Class!</h3>
             <div className="relative min-h-[400px]">
               <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-6">
                 <span className="text-2xl font-bold">{roles[currentRoleIndex].name}</span>
